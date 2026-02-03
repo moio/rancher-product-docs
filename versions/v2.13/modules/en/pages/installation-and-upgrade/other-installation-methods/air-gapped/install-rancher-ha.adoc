@@ -124,24 +124,27 @@ Recent changes to cert-manager require an upgrade. If you are upgrading Rancher 
 ====
 
 
-===== 1. Add the cert-manager Repo
+===== 1. Authenticate to the SUSE Application Collection
 
-From a system connected to the internet, add the cert-manager repo to Helm:
+From a system connected to the internet, authenticate to the SUSE Application Collection:
 
 [,plain]
 ----
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
 ----
+
+Replace `<USERNAME>` with your username and `<TOKEN_OR_SECRET>` with your access token or service account secret. For more information, see the https://docs.apps.rancher.io/get-started/authentication[SUSE Application Collection Authentication documentation].
 
 ===== 2. Fetch the cert-manager Chart
 
-Fetch the latest cert-manager chart available from the https://artifacthub.io/packages/helm/cert-manager/cert-manager[Helm chart repository].
+Fetch the cert-manager chart from the SUSE Application Collection:
 
 [,plain]
 ----
-helm fetch jetstack/cert-manager --version v1.11.0
+helm pull oci://dp.apps.rancher.io/charts/cert-manager --version v1.13.1
 ----
+
+This will download the chart as a `.tgz` file. Note: The chart images are already configured to pull from the SUSE Application Collection registry, but you will need to mirror these images to your private registry for air-gapped installations. See the xref:installation-and-upgrade/other-installation-methods/air-gapped/publish-images.adoc[Prepare your Private Registry] documentation.
 
 ===== 3. Retrieve the cert-manager CRDs
 
@@ -149,7 +152,7 @@ Download the required CRD file for cert-manager:
 
 [,plain]
 ----
-   curl -L -o cert-manager-crd.yaml https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.crds.yaml
+   curl -L -o cert-manager-crd.yaml https://github.com/cert-manager/cert-manager/releases/download/v1.13.1/cert-manager.crds.yaml
 ----
 
 === 4. Install Rancher
@@ -186,12 +189,13 @@ If you are using self-signed certificates, install cert-manager:
  kubectl apply -f cert-manager-crd.yaml
 ----
 
-. Install cert-manager.
+. Install cert-manager. Note: Update the image repositories to point to your private registry where you have mirrored the cert-manager images.
 +
 [,plain]
 ----
- helm install cert-manager ./cert-manager-v1.11.0.tgz \
+ helm install cert-manager ./cert-manager-v1.13.1.tgz \
      --namespace cert-manager \
+     --set crds.enabled=true \
      --set image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-controller \
      --set webhook.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-webhook \
      --set cainjector.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-cainjector \
