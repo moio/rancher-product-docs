@@ -113,20 +113,25 @@ include::shared:ROOT:partial$zh/helm-chart-repo-url.adoc[]
 ----
 kubectl create namespace cattle-system
 
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/<VERSION>/cert-manager.crds.yaml
+# 向 SUSE Application Collection 进行身份验证
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
 
-helm repo add jetstack https://charts.jetstack.io
+# 创建用于拉取镜像的 Kubernetes Secret
+kubectl create secret docker-registry application-collection \
+  --docker-server=dp.apps.rancher.io \
+  --docker-username=<USERNAME> \
+  --docker-password=<TOKEN_OR_SECRET> \
+  -n cert-manager \
+  --dry-run=client -o yaml | kubectl apply -f -
 
-helm repo update
+# 创建 cert-manager 命名空间
+kubectl create namespace cert-manager
 
-helm install cert-manager jetstack/cert-manager \
+# 从 SUSE Application Collection 安装 cert-manager Helm Chart
+helm install cert-manager oci://dp.apps.rancher.io/charts/cert-manager \
   --namespace cert-manager \
-  --create-namespace
-
-# Windows Powershell
-helm install cert-manager jetstack/cert-manager `
-  --namespace cert-manager `
-  --create-namespace
+  --set crds.enabled=true \
+  --set global.imagePullSecrets={application-collection}
 ----
 
 安装 Rancher 的最终命令如下。该命令需要一个将流量转发到 Linux 主机的域名。为了简化本教程，你可以使用假域名。`<IP_OF_LINUX_NODE>.sslip.io` 是一个假域名的例子。
