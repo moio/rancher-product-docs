@@ -120,22 +120,25 @@ Rancher Server 默认设计为安全的，并且需要 SSL/TLS 配置。
 
 ===== 1. 添加 cert-manager 仓库
 
-在可以连接互联网的系统中，将 cert-manager 仓库添加到 Helm：
+在可以连接互联网的系统中,向 SUSE Application Collection 进行身份验证：
 
 [,plain]
 ----
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
 ----
+
+将 `<USERNAME>` 替换为你的用户名,将 `<TOKEN_OR_SECRET>` 替换为你的访问令牌或服务帐户密钥。有关更多信息,请参阅 https://docs.apps.rancher.io/get-started/authentication[SUSE Application Collection 身份验证文档]。
 
 ===== 2. 获取 cert-manager Chart
 
-从 https://artifacthub.io/packages/helm/cert-manager/cert-manager[Helm Chart 仓库]中获取最新可用的 cert-manager Chart：
+从 SUSE Application Collection 获取 cert-manager Chart：
 
 [,plain]
 ----
-helm fetch jetstack/cert-manager
+helm pull oci://dp.apps.rancher.io/charts/cert-manager --version v1.13.1
 ----
+
+这将下载 Chart 作为一个 `.tgz` 文件。注意：Chart 镜像已配置为从 SUSE Application Collection 镜像仓库拉取,但你需要将这些镜像镜像到你的私有镜像仓库以进行离线安装。请参阅xref:installation-and-upgrade/other-installation-methods/air-gapped/publish-images.adoc[准备私有镜像仓库]文档。
 
 ===== 3. 检索 Cert-Manager CRD
 
@@ -143,7 +146,7 @@ helm fetch jetstack/cert-manager
 
 [,plain]
 ----
-curl -L -o cert-manager-crd.yaml https://github.com/cert-manager/cert-manager/releases/download/<VERSION>/cert-manager.crds.yaml
+curl -L -o cert-manager-crd.yaml https://github.com/cert-manager/cert-manager/releases/download/v1.13.1/cert-manager.crds.yaml
 ----
 
 === 4. 安装 Rancher
@@ -177,15 +180,16 @@ kubectl create namespace cert-manager
 +
 [,plain]
 ----
-kubectl apply -f cert-manager/cert-manager-crd.yaml
+kubectl apply -f cert-manager-crd.yaml
 ----
 
-. 安装 cert-manager。
+. 安装 cert-manager。注意：更新镜像仓库以指向你的私有镜像仓库,你已在其中镜像了 cert-manager 镜像。
 +
 [,plain]
 ----
-helm install cert-manager ./cert-manager-<VERSION>.tgz \
+helm install cert-manager ./cert-manager-v1.13.1.tgz \
     --namespace cert-manager \
+    --set crds.enabled=true \
     --set image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-controller \
     --set webhook.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-webhook \
     --set cainjector.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-cainjector \
