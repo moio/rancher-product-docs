@@ -83,10 +83,10 @@ Recent changes to cert-manager require an upgrade. If you are upgrading Rancher 
 +
 [,plain]
 ----
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-helm fetch jetstack/cert-manager
-helm template ./cert-manager-<version>.tgz | awk '$1 ~ /image:/ {print $2}' | sed s/\"//g >> ./rancher-images.txt
+# Authenticate to the SUSE Application Collection
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
+helm pull oci://dp.apps.rancher.io/charts/cert-manager --version v1.13.1
+helm template ./cert-manager-v1.13.1.tgz | awk '$1 ~ /image:/ {print $2}' | sed s/\"//g >> ./rancher-images.txt
 ----
 
 . Sort and unique the images list to remove any overlap between the sources:
@@ -302,10 +302,10 @@ Recent changes to cert-manager require an upgrade. If you are upgrading Rancher 
 +
 [,plain]
 ----
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-helm fetch jetstack/cert-manager
-helm template ./cert-manager-<version>.tgz | awk '$1 ~ /image:/ {print $2}' | sed s/\"//g >> ./rancher-images.txt
+# Authenticate to the SUSE Application Collection
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
+helm pull oci://dp.apps.rancher.io/charts/cert-manager --version v1.13.1
+helm template ./cert-manager-v1.13.1.tgz | awk '$1 ~ /image:/ {print $2}' | sed s/\"//g >> ./rancher-images.txt
 ----
 
 . Sort and unique the images list to remove any overlap between the sources:

@@ -85,10 +85,10 @@
 +
 [,plain]
 ----
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-helm fetch jetstack/cert-manager
-helm template ./cert-manager-<version>.tgz | awk '$1 ~ /image:/ {print $2}' | sed s/\"//g >> ./rancher-images.txt
+# Authenticate to the SUSE Application Collection
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
+helm pull oci://dp.apps.rancher.io/charts/cert-manager --version v1.13.1
+helm template ./cert-manager-v1.13.1.tgz | awk '$1 ~ /image:/ {print $2}' | sed s/\"//g >> ./rancher-images.txt
 ----
 
 . 对镜像列表进行排序和唯一化，以去除重复的镜像源：
@@ -309,10 +309,10 @@ Linux 镜像需要在 Linux 主机上收集和推送，但是你必须先将 Win
 +
 [,plain]
 ----
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-helm fetch jetstack/cert-manager
-helm template ./cert-manager-<version>.tgz | awk '$1 ~ /image:/ {print $2}' | sed s/\"//g >> ./rancher-images.txt
+# Authenticate to the SUSE Application Collection
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
+helm pull oci://dp.apps.rancher.io/charts/cert-manager --version v1.13.1
+helm template ./cert-manager-v1.13.1.tgz | awk '$1 ~ /image:/ {print $2}' | sed s/\"//g >> ./rancher-images.txt
 ----
 
 . 对镜像列表进行排序和唯一化，以去除重复的镜像源：
