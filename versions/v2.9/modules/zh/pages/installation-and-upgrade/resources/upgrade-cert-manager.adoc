@@ -88,27 +88,35 @@ kubectl apply --validate=false -f https://github.com/cert-manager/cert-manager/r
 kubectl create namespace cert-manager
 ----
 
-. 添加 Jetstack Helm 仓库：
+. 向 SUSE Application Collection 进行身份验证：
 +
 [,plain]
 ----
-helm repo add jetstack https://charts.jetstack.io
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
+----
++
+将 `<USERNAME>` 替换为你的用户名，将 `<TOKEN_OR_SECRET>` 替换为你的访问令牌或服务帐户密钥。有关更多信息，请参阅 https://docs.apps.rancher.io/get-started/authentication[SUSE Application Collection 身份验证文档]。
+
+. 创建用于拉取镜像的 Secret：
++
+[,plain]
+----
+kubectl create secret docker-registry application-collection \
+  --docker-server=dp.apps.rancher.io \
+  --docker-username=<USERNAME> \
+  --docker-password=<TOKEN_OR_SECRET> \
+  -n cert-manager \
+  --dry-run=client -o yaml | kubectl apply -f -
 ----
 
-. 更新 Helm Chart 仓库本地缓存：
+. 从 SUSE Application Collection 安装新版本的 cert-manager：
 +
 [,plain]
 ----
-helm repo update
-----
-
-. 安装新版本的 cert-manager：
-+
-[,plain]
-----
-helm install \
-  cert-manager jetstack/cert-manager \
-  --namespace cert-manager
+helm install cert-manager oci://dp.apps.rancher.io/charts/cert-manager \
+  --namespace cert-manager \
+  --set crds.enabled=true \
+  --set global.imagePullSecrets={application-collection}
 ----
 
 . https://cert-manager.io/docs/tutorials/backup/#restoring-resources[恢复备份资源]：
@@ -131,19 +139,20 @@ kubectl apply -f cert-manager-backup.yaml
 在执行升级之前，先将所需的容器镜像添加到私有镜像仓库中，并下载/渲染所需的 Kubernetes manifest 文件来准备离线环境。
 
 . 参见xref:installation-and-upgrade/other-installation-methods/air-gapped/publish-images.adoc[准备私有镜像仓库]指南，将升级所需的镜像推送到镜像仓库。
-. 在可以连接互联网的系统中，将 cert-manager 仓库添加到 Helm：
+. 在可以连接互联网的系统中，向 SUSE Application Collection 进行身份验证：
 +
 [,plain]
 ----
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
 ----
++
+将 `<USERNAME>` 替换为你的用户名，将 `<TOKEN_OR_SECRET>` 替换为你的访问令牌或服务帐户密钥。有关更多信息，请参阅 https://docs.apps.rancher.io/get-started/authentication[SUSE Application Collection 身份验证文档]。
 
-. 从 https://artifacthub.io/packages/helm/cert-manager/cert-manager[Helm Chart 仓库]中获取最新可用的 cert-manager Chart：
+. 从 SUSE Application Collection 获取 cert-manager Chart：
 +
 [,plain]
 ----
-helm fetch jetstack/cert-manager
+helm pull oci://dp.apps.rancher.io/charts/cert-manager --version v1.13.1
 ----
 
 . 使用安装 Chart 的选项来渲染 cert-manager 模板。记住要设置 `image.repository` 选项，以从你的私有镜像仓库拉取镜像。此操作会创建一个包含 Kubernetes manifest 文件的 `cert-manager` 目录。
@@ -152,10 +161,11 @@ Helm 3 命令如下：
 +
 [,plain]
 ----
-helm template cert-manager ./cert-manager-v0.12.0.tgz --output-dir . \
+helm template cert-manager ./cert-manager-v1.13.1.tgz --output-dir . \
 --namespace cert-manager \
---set image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-controller
---set webhook.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-webhook
+--set crds.enabled=true \
+--set image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-controller \
+--set webhook.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-webhook \
 --set cainjector.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-cainjector
 ----
 +
@@ -165,10 +175,11 @@ Helm 2 命令如下：
 +
 [,plain]
 ----
-helm template ./cert-manager-v0.12.0.tgz --output-dir . \
+helm template ./cert-manager-v1.13.1.tgz --output-dir . \
 --name cert-manager --namespace cert-manager \
---set image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-controller
---set webhook.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-webhook
+--set crds.enabled=true \
+--set image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-controller \
+--set webhook.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-webhook \
 --set cainjector.image.repository=<REGISTRY.YOURDOMAIN.COM:PORT>/quay.io/jetstack/cert-manager-cainjector
 ----
 
@@ -176,7 +187,7 @@ helm template ./cert-manager-v0.12.0.tgz --output-dir . \
 +
 [,plain]
 ----
-curl -L -o cert-manager-crd.yaml https://raw.githubusercontent.com/cert-manager/cert-manager/release-0.12/deploy/manifests/00-crds.yaml
+curl -L -o cert-manager-crd.yaml https://github.com/cert-manager/cert-manager/releases/download/v1.13.1/cert-manager.crds.yaml
 curl -L -o cert-manager/cert-manager-crd-old.yaml https://raw.githubusercontent.com/cert-manager/cert-manager/release-X.Y/deploy/manifests/00-crds.yaml
 ----
 

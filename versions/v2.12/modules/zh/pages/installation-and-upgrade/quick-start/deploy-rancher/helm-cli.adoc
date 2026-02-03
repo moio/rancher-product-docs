@@ -113,20 +113,31 @@ include::shared:ROOT:partial$zh/helm-chart-repo-url.adoc[]
 ----
 kubectl create namespace cattle-system
 
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/<VERSION>/cert-manager.crds.yaml
+# 向 SUSE Application Collection 进行身份验证
+# 将 <USERNAME> 替换为你的用户名，将 <TOKEN_OR_SECRET> 替换为你的访问令牌或服务帐户密钥
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
 
-helm repo add jetstack https://charts.jetstack.io
+# 创建用于从 SUSE Application Collection 拉取镜像的 Secret
+kubectl create secret docker-registry application-collection \
+  --docker-server=dp.apps.rancher.io \
+  --docker-username=<USERNAME> \
+  --docker-password=<TOKEN_OR_SECRET> \
+  -n cert-manager \
+  --dry-run=client -o yaml | kubectl apply -f -
 
-helm repo update
-
-helm install cert-manager jetstack/cert-manager \
+# 从 SUSE Application Collection 安装 cert-manager
+helm install cert-manager oci://dp.apps.rancher.io/charts/cert-manager \
   --namespace cert-manager \
-  --create-namespace
+  --create-namespace \
+  --set crds.enabled=true \
+  --set global.imagePullSecrets={application-collection}
 
 # Windows Powershell
-helm install cert-manager jetstack/cert-manager `
+helm install cert-manager oci://dp.apps.rancher.io/charts/cert-manager `
   --namespace cert-manager `
-  --create-namespace
+  --create-namespace `
+  --set crds.enabled=true `
+  --set global.imagePullSecrets={application-collection}
 ----
 
 安装 Rancher 的最终命令如下。该命令需要一个将流量转发到 Linux 主机的域名。为了简化本教程，你可以使用假域名。`<IP_OF_LINUX_NODE>.sslip.io` 是一个假域名的例子。
@@ -134,6 +145,8 @@ helm install cert-manager jetstack/cert-manager `
 要安装特定的 Rancher 版本，请使用 `--version` 标志（例如，`--version 2.6.6`）。否则，默认安装最新的 Rancher。
 
 请注意，密码至少需要 12 个字符。
+
+include::shared:ROOT:partial$zh/rancher-chart-rename.adoc[]
 
 ----
 helm install rancher rancher-prime/rancher \
@@ -143,6 +156,9 @@ helm install rancher rancher-prime/rancher \
   --set bootstrapPassword=<PASSWORD_FOR_RANCHER_ADMIN>
 
 # Windows Powershell
+
+include::shared:ROOT:partial$zh/rancher-chart-rename.adoc[]
+
 helm install rancher rancher-prime/rancher `
   --namespace cattle-system `
   --set hostname=<IP_OF_LINUX_NODE>.sslip.io `

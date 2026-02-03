@@ -1,6 +1,8 @@
 = 3. Install {rancher-product-name}
+ifeval::["{build-type}" != "srfa"]
 :page-languages: [en, zh]
-:revdate: 2025-04-24
+endif::[]
+:revdate: 2026-01-26
 :page-revdate: {revdate}
 
 Now that you have a running RKE cluster, you can install Rancher in it. For security reasons all traffic to Rancher must be encrypted with TLS. For this tutorial you are going to automatically issue a self-signed certificate through https://cert-manager.io/[cert-manager]. In a real-world use-case you will likely use Let's Encrypt or provide your own certificate.
@@ -19,10 +21,10 @@ sudo ./get_helm.sh
 
 == Install cert-manager
 
-Add the cert-manager Helm repository:
+Authenticate to the SUSE Application Collection:
 
 ----
-helm repo add jetstack https://charts.jetstack.io
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
 ----
 
 Create a namespace for cert-manager:
@@ -31,13 +33,18 @@ Create a namespace for cert-manager:
 kubectl create namespace cert-manager
 ----
 
-Install the CustomResourceDefinitions of cert-manager:
+Create a secret for pulling images from the SUSE Application Collection:
 
 ----
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/<VERSION>/cert-manager.crds.yaml
+kubectl create secret docker-registry application-collection \
+  --docker-server=dp.apps.rancher.io \
+  --docker-username=<USERNAME> \
+  --docker-password=<TOKEN_OR_SECRET> \
+  -n cert-manager \
+  --dry-run=client -o yaml | kubectl apply -f -
 ----
 
-And install it with Helm. Note that cert-manager also needs your proxy configured in case it needs to communicate with Let's Encrypt or other external certificate issuers:
+Install cert-manager from the SUSE Application Collection. Note that cert-manager also needs your proxy configured in case it needs to communicate with Let's Encrypt or other external certificate issuers:
 
 [NOTE]
 ====
@@ -47,8 +54,10 @@ To see options on how to customize the cert-manager install (including for cases
 
 
 ----
-helm upgrade --install cert-manager jetstack/cert-manager \
+helm upgrade --install cert-manager oci://dp.apps.rancher.io/charts/cert-manager \
   --namespace cert-manager \
+  --set crds.enabled=true \
+  --set global.imagePullSecrets={application-collection} \
   --set http_proxy=http://${proxy_host} \
   --set https_proxy=http://${proxy_host} \
   --set no_proxy=127.0.0.0/8\\,10.0.0.0/8\\,cattle-system.svc\\,172.16.0.0/12\\,192.168.0.0/16\\,.svc\\,.cluster.local

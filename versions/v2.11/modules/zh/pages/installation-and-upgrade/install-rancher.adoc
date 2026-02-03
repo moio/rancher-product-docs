@@ -152,20 +152,44 @@ ____
 ====
 
 
+[discrete]
+==== 向 SUSE Application Collection 进行身份验证
+
+在安装 cert-manager 之前,你需要向 SUSE Application Collection OCI 镜像仓库进行身份验证。此镜像仓库需要对 Helm 操作和拉取容器镜像进行身份验证。
+
+. 向 Helm 镜像仓库进行身份验证：
++
 ----
-# 如果你手动安装了CRD，而不是在 Helm 安装命令中添加了 `--set installCRDs=true` 选项，你应该在升级 Helm Chart 之前升级 CRD 资源。
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/<VERSION>/cert-manager.crds.yaml
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
+----
++
+将 `<USERNAME>` 替换为你的用户名,将 `<TOKEN_OR_SECRET>` 替换为你的访问令牌或服务帐户密钥。有关身份验证的更多信息,请参阅 https://docs.apps.rancher.io/get-started/authentication[SUSE Application Collection 身份验证文档]。
 
-# 添加 Jetstack Helm 仓库
-helm repo add jetstack https://charts.jetstack.io
+. 创建用于拉取镜像的 Kubernetes Secret：
++
+----
+kubectl create secret docker-registry application-collection \
+  --docker-server=dp.apps.rancher.io \
+  --docker-username=<USERNAME> \
+  --docker-password=<TOKEN_OR_SECRET> \
+  -n cert-manager \
+  --dry-run=client -o yaml | kubectl apply -f -
+----
++
+此 Secret 将用于从 Application Collection 镜像仓库拉取 cert-manager 容器镜像。
 
-# 更新本地 Helm Chart 仓库缓存
-helm repo update
+[discrete]
+==== 安装 cert-manager
 
-# 安装 cert-manager Helm Chart
-helm install cert-manager jetstack/cert-manager \
+----
+# 创建 cert-manager 命名空间
+kubectl create namespace cert-manager
+
+# 从 SUSE Application Collection 安装 cert-manager Helm Chart
+helm install cert-manager oci://dp.apps.rancher.io/charts/cert-manager \
   --namespace cert-manager \
-  --create-namespace
+  --set crds.enabled=true \
+  --set global.imagePullSecrets={application-collection}
 ----
 
 安装完 cert-manager 后，你可以通过检查 cert-manager 命名空间中正在运行的 Pod 来验证它是否已正确部署：

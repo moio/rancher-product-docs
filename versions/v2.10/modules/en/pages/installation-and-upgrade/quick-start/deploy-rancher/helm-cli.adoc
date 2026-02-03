@@ -113,20 +113,31 @@ include::shared:ROOT:partial$en/helm-chart-repo-url.adoc[]
 ----
 kubectl create namespace cattle-system
 
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/<VERSION>/cert-manager.crds.yaml
+# Authenticate to the SUSE Application Collection
+# Replace <USERNAME> with your username and <TOKEN_OR_SECRET> with your access token or service account secret
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
 
-helm repo add jetstack https://charts.jetstack.io
+# Create a secret for pulling images from the SUSE Application Collection
+kubectl create secret docker-registry application-collection \
+  --docker-server=dp.apps.rancher.io \
+  --docker-username=<USERNAME> \
+  --docker-password=<TOKEN_OR_SECRET> \
+  -n cert-manager \
+  --dry-run=client -o yaml | kubectl apply -f -
 
-helm repo update
-
-helm install cert-manager jetstack/cert-manager \
+# Install cert-manager from the SUSE Application Collection
+helm install cert-manager oci://dp.apps.rancher.io/charts/cert-manager \
   --namespace cert-manager \
-  --create-namespace
+  --create-namespace \
+  --set crds.enabled=true \
+  --set global.imagePullSecrets={application-collection}
 
 # Windows Powershell
-helm install cert-manager jetstack/cert-manager `
+helm install cert-manager oci://dp.apps.rancher.io/charts/cert-manager `
   --namespace cert-manager `
-  --create-namespace
+  --create-namespace `
+  --set crds.enabled=true `
+  --set global.imagePullSecrets={application-collection}
 ----
 
 The final command to install Rancher is below. The command requires a domain name that forwards traffic to the Linux machine. For the sake of simplicity in this tutorial, you can use a fake domain name to create your proof-of-concept. An example of a fake domain name would be `<IP_OF_LINUX_NODE>.sslip.io`.

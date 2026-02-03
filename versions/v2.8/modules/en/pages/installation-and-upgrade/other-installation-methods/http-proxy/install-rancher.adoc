@@ -19,10 +19,10 @@ sudo ./get_helm.sh
 
 == Install cert-manager
 
-Add the cert-manager Helm repository:
+Authenticate to the SUSE Application Collection:
 
 ----
-helm repo add jetstack https://charts.jetstack.io
+helm registry login dp.apps.rancher.io -u <USERNAME> -p <TOKEN_OR_SECRET>
 ----
 
 Create a namespace for cert-manager:
@@ -31,10 +31,15 @@ Create a namespace for cert-manager:
 kubectl create namespace cert-manager
 ----
 
-Install the CustomResourceDefinitions of cert-manager:
+Create a Kubernetes secret for pulling images:
 
 ----
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/<VERSION>/cert-manager.crds.yaml
+kubectl create secret docker-registry application-collection \
+  --docker-server=dp.apps.rancher.io \
+  --docker-username=<USERNAME> \
+  --docker-password=<TOKEN_OR_SECRET> \
+  -n cert-manager \
+  --dry-run=client -o yaml | kubectl apply -f -
 ----
 
 And install it with Helm. Note that cert-manager also needs your proxy configured in case it needs to communicate with Let's Encrypt or other external certificate issuers:
@@ -47,8 +52,10 @@ To see options on how to customize the cert-manager install (including for cases
 
 
 ----
-helm upgrade --install cert-manager jetstack/cert-manager \
+helm upgrade --install cert-manager oci://dp.apps.rancher.io/charts/cert-manager \
   --namespace cert-manager \
+  --set crds.enabled=true \
+  --set global.imagePullSecrets={application-collection} \
   --set http_proxy=http://${proxy_host} \
   --set https_proxy=http://${proxy_host} \
   --set no_proxy=127.0.0.0/8\\,10.0.0.0/8\\,cattle-system.svc\\,172.16.0.0/12\\,192.168.0.0/16\\,.svc\\,.cluster.local
